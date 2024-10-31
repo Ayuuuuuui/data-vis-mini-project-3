@@ -106,11 +106,34 @@ fig = px.bar(tag_counts, x='tag', y='count', title="Tag Counts", labels={'count'
 st.title("Visual Analytics for NER")
 st.write("Example result from corpus 'Khasod'")
 
+st.subheader('Result table')
+st.dataframe(result_table,use_container_width=True)
+
 cols = st.columns(2)
 with cols[0]:
-    st.dataframe(result_table)
+  st.subheader('Most occurs word')
+  contents = df_corpus['content'].apply(lambda x: x.split()).tolist()
+  contents = sum(contents, [])
+
+  # Create a dictionary to count word occurrences
+  word_counts = {}
+  for word in contents:
+      if word in word_counts:
+          word_counts[word] += 1
+      else:
+          word_counts[word] = 1
+
+  # Sort the dictionary by frequency in descending order and get the top 10 words
+  top_ten_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+  # Print the top 10 most common words with their counts
+  for word, count in top_ten_words:
+      st.write(f'{word} occurs {count} times')
+
+
 with cols[1]:
-    st.plotly_chart(fig)
+  st.subheader('Bar chart of Tags')
+  st.plotly_chart(fig)
 
 st.title("Corpus Details")
 
