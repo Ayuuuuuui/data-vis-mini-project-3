@@ -112,4 +112,8 @@ with cols[0]:
 with cols[1]:
     st.plotly_chart(fig)
 
-st.title("Section1")
+st.title("Corpus Details")
+
+for index, row in df_corpus.iterrows():
+  st.subheader(f'Content {index+1}: {row['title']}')
+  st.write(row['content'])
