@@ -111,3 +111,5 @@ with cols[0]:
     st.dataframe(result_table)
 with cols[1]:
     st.plotly_chart(fig)
+
+st.title("Section1")
