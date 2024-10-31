@@ -104,7 +104,7 @@ tag_counts = result_table['tag'].value_counts().reset_index()
 fig = px.bar(tag_counts, x='tag', y='count', title="Tag Counts", labels={'count': 'Count', 'tag': 'Tag'})
 
 st.title("Visual Analytics for NER")
-st.write("Example result from corpus")
+st.write("Example result from corpus 'Khasod'")
 
 cols = st.columns(2)
 with cols[0]:
