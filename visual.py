@@ -2,7 +2,12 @@ import streamlit as st
 import plotly.express as px
 import joblib
 import pandas as pd
-
+import altair as alt
+from sklearn.metrics import confusion_matrix
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import random
 
 model = joblib.load("model.joblib")
 
@@ -51,92 +56,154 @@ def parse(text):
   return model.predict([features])[0]
 
 
-import zipfile
-from bs4 import BeautifulSoup
-import textwrap
-import pandas as pd
+# Sample Thai names and surnames
+first_names = ["สมชาย", "วิชัย", "สมศักดิ์", "กิตติ", "อัศวิน", "ประสิทธิ์", "สุริยะ", "ชัยวัฒน์", "วัฒนา", "เอกชัย", "พัฒน์พงศ์", "สุพจน์", "วิเชียร", "อรุณ", "กำธร"]
+last_names = ["มีสุข", "สวัสดี", "สุขใจ", "ใจดี", "ใจบุญ", "กิตติกูล", "ชนะพงศ์", "สุวรรณ", "คงเจริญ", "เพิ่มพูน", "เจริญสุข", "ชัยรัตน์", "ทรงชัย", "สุทธิชัย", "รุ่งเรือง"]
 
-zipf = zipfile.ZipFile('khaosod.zip','r')
-filenames = zipf.namelist()
+# Sample Thai locations
+districts = ["สามย่าน", "ลาดพร้าว", "บางนา", "บางเขน", "ห้วยขวาง", "บางกะปิ", "ดอนเมือง", "บางบัวทอง", "บางพลี", "พระโขนง", "พญาไท", "บางกอกน้อย", "บางกอกใหญ่", "ปทุมวัน", "สาทร"]
+subdistricts = ["ทุ่งมหาเมฆ", "สวนหลวง", "ลาดยาว", "สีกัน", "บางรัก", "ปากเกร็ด", "บางมด", "ลาดพร้าว", "ศาลายา", "บางกะปิ", "คลองตัน", "พระโขนง", "ลาดพร้าว", "บางนา", "บางซื่อ"]
+provinces = ["กรุงเทพฯ", "กทม", "กรุงเทพมหานคร", "นนทบุรี", "ปทุมธานี", "สมุทรปราการ", "นครปฐม", "ชลบุรี", "อยุธยา", "สระบุรี", "ราชบุรี", "อ่างทอง"]
+postal_codes = ["10100", "10240", "10120", "10230", "10310", "10150", "10210", "11120", "10270", "10540"]
 
-corpus_content = list()
-for filename in filenames:
-  html_file = zipf.open(filename)
-  html_string = html_file.read().decode('utf-8')
-  html_file.close()
+# Function to generate random addresses with shuffled order (except name-surname order)
+def generate_address(num_addresses):
+    random.seed(42)
+    addresses = []
+    tags = []
+    
+    for _ in range(num_addresses):
+        # Generate name and surname, which must appear together
+        first_name = random.choice(first_names)
+        last_name = random.choice(last_names)
+        name = f"นาย{first_name} {last_name}"
+        name_tag = ["O", "O"]  # Tag '0' for first name and 'O' for last name
+        
+        # Other components for the address and their tags
+        other_components = [
+            (f"{random.randint(1, 999)}/{random.randint(1, 99)}", "ADDR"),
+            (random.choice(districts), "LOC"),
+            (random.choice(subdistricts), "LOC"),
+            (random.choice(provinces), "LOC"),
+            (random.choice(postal_codes), "POST")
+        ]
+        
+        # Shuffle the other components
+        random.shuffle(other_components)
+        
+        # Separate components and their tags after shuffling
+        shuffled_components, shuffled_tags = zip(*other_components)
+        
+        # Combine name (first + last) with other shuffled components
+        address = f"{name} " + " ".join(shuffled_components)
+        address_tags = name_tag + list(shuffled_tags)
+        
+        # Append results
+        addresses.append(address)
+        tags.append(address_tags)
+    
+    return addresses, tags
 
-  html_soup = BeautifulSoup(html_string, 'html.parser')
-  # print(html_soup.prettify())
+# Generate 100 random addresses and their tags
+random_addresses, random_tags = generate_address(100)
 
-  title_box = html_soup.find('h1',class_='udsg__main-title')
-  title = title_box.text.strip()
-  # print(title)
+# Convert the generated addresses and tags to a DataFrame for CSV export
+df_addresses = pd.DataFrame({
+    "Address": random_addresses,
+    "Tags": random_tags
+})
 
-  content_box = html_soup.find('div', class_='udsg__content')
-  content = ''
-  for p in content_box.find_all('p'):
-    content += p.text
-  content = content.replace('\n','').replace('  ','').strip()
-  # print(textwrap.fill(content,width=120))
+rows = df_addresses.shape[0]
 
-  corpus_content.append({'title':title,
-                         'content':content
-                         })
-zipf.close()
-
-df_corpus = pd.DataFrame(corpus_content)
-
-cont = []
-result = []
-for i in range(df_corpus.shape[0]):
-    content = df_corpus['content'][i]
-    cont.append(content.split())
-    result.append(parse(content).tolist())
-
-cont = sum(cont,[])
-result = sum(result,[])
-
-result_table = pd.DataFrame({'token': cont,
-                             'tag': result})
-
-tag_counts = result_table['tag'].value_counts().reset_index()
-
-fig = px.bar(tag_counts, x='tag', y='count', title="Tag Counts", labels={'count': 'Count', 'tag': 'Tag'})
-
-st.title("Visual Analytics for NER")
-st.write("Example result from corpus 'Khasod'")
-
-st.subheader('Result table')
-st.dataframe(result_table,use_container_width=True)
-
-cols = st.columns(2)
-with cols[0]:
-  st.subheader('Most occurs word')
-  contents = df_corpus['content'].apply(lambda x: x.split()).tolist()
-  contents = sum(contents, [])
-
-  # Create a dictionary to count word occurrences
-  word_counts = {}
-  for word in contents:
-      if word in word_counts:
-          word_counts[word] += 1
-      else:
-          word_counts[word] = 1
-
-  # Sort the dictionary by frequency in descending order and get the top 10 words
-  top_ten_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-
-  # Print the top 10 most common words with their counts
-  for word, count in top_ten_words:
-      st.write(f'{word} occurs {count} times')
+for index, row in df_addresses.iterrows():
+    content = df_addresses.iloc[index,0]
+    df_addresses['Predict'] = df_addresses['Address'].apply(parse)
 
 
-with cols[1]:
-  st.subheader('Bar chart of Tags')
-  st.plotly_chart(fig)
+# Flatten the 'Tags' and 'Predict' columns to compare corresponding elements
+true_tags = [tag for tags in df_addresses["Tags"] for tag in tags]
+predicted_tags = [tag for tags in df_addresses["Predict"] for tag in tags]
 
-st.title("Corpus Details")
+# Create the confusion matrix
+cm = confusion_matrix(true_tags, predicted_tags)
 
-for index, row in df_corpus.iterrows():
-  st.subheader(f'Content {index+1}: {row['title']}')
-  st.write(row['content'])
+# Get the unique labels (tags) to display the confusion matrix with proper labels
+labels = np.unique(true_tags)
+
+# Convert the confusion matrix into a DataFrame for better visualization
+cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+
+
+#---------------------------------------------------
+st.set_page_config(
+    page_title="NER Visualization",
+    page_icon="📊"
+    # layout="wide"
+)
+
+# Create WebApp by Streamlit
+st.title('Named Entity Recognition (NER) Visualization')
+# Create a function to highlight tags
+
+def highlight_address(address, tags):
+    highlighted_address = ""
+    tag_colors = {
+        "O": "background-color: #FFB067; border-radius: 5px; padding: 2px;",
+        "LOC": "background-color: #FFED86; border-radius: 5px; padding: 2px;",
+        "POST": "background-color: #A2DCE7; border-radius: 5px; padding: 2px;",
+        "ADDR": "background-color: #F8CCDC; border-radius: 5px; padding: 2px;"
+    }
+    
+    words = address.split()
+    for word, tag in zip(words, tags):
+        style = tag_colors.get(tag, "")
+        highlighted_address += f"<span style='{style}'>{word}</span> "
+    
+    return highlighted_address
+
+
+# Random and Displaythe highlighted address in Streamlit
+if st.button('Generate Example'):
+
+  # Example of an address with tags to highlight
+  sample_address = random.choice(df_addresses.values)
+  address = sample_address[0]
+  tags = sample_address[1]
+
+  # Highlight the example address
+  highlighted_example = highlight_address(address, tags)
+  # Streamlit markdown with the example and legend
+  st.markdown(
+      f"""
+      ### Example Address with Highlighted Tags
+      {highlighted_example}
+      """,
+      unsafe_allow_html=True
+  )
+
+
+# Legend to explain each tag
+st.markdown(
+    """
+    ### Legend:
+    <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
+    <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
+    <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
+    <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
+    """,
+    unsafe_allow_html=True
+)
+
+
+st.subheader('Confusion Matrix from Testing data')
+
+# Plotting the confusion matrix using Seaborn and Matplotlib
+with st.container(border = True):
+  # Display the plot within a specific div container
+  fig, ax = plt.subplots(figsize=(8, 6))  # You can still control fig size
+  sns.heatmap(cm_df, annot=True, fmt="d", cmap="Blues", cbar=True, ax=ax)
+
+  # Display the plot in Streamlit with the custom style class
+  st.pyplot(fig)
+
+st.dataframe(df_addresses, use_container_width=False)
