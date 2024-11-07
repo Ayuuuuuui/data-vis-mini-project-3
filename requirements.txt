@@ -6,5 +6,4 @@ plotly
 joblib
 sklearn_crfsuite
 bs4
-matplotlib.pyplot
 seaborn
