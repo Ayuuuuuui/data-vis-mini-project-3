@@ -176,7 +176,6 @@ df_fixed = create_df(rd=False)
 df_rand = create_df(rd=True)
 
 with st.container(border = True):
-  st.subheader('Random position tags')
   # Random and Displaythe highlighted address in Streamlit
   if st.button('Generate Example'):
     # Example of an address with tags to highlight
