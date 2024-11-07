@@ -67,7 +67,8 @@ provinces = ["กรุงเทพฯ", "กทม", "กรุงเทพม�
 postal_codes = ["10100", "10240", "10120", "10230", "10310", "10150", "10210", "11120", "10270", "10540"]
 
 # Function to generate random addresses with shuffled order (except name-surname order)
-def generate_address(num_addresses, seed=42):
+# Updated function with 'rd' parameter to control shuffling
+def generate_address(num_addresses, seed=42, rd=True):
     random.seed(seed)
     addresses = []
     tags = []
@@ -77,7 +78,7 @@ def generate_address(num_addresses, seed=42):
         first_name = random.choice(first_names)
         last_name = random.choice(last_names)
         name = f"นาย{first_name} {last_name}"
-        name_tag = ["O", "O"]  # Tag '0' for first name and 'O' for last name
+        name_tag = ["O", "O"]  # Tag 'O' for first name and last name
         
         # Other components for the address and their tags
         other_components = [
@@ -88,15 +89,16 @@ def generate_address(num_addresses, seed=42):
             (random.choice(postal_codes), "POST")
         ]
         
-        # Shuffle the other components
-        random.shuffle(other_components)
+        # Conditionally shuffle the other components based on the rd parameter
+        if rd:
+            random.shuffle(other_components)
         
-        # Separate components and their tags after shuffling
-        shuffled_components, shuffled_tags = zip(*other_components)
+        # Separate components and their tags (in either shuffled or fixed order)
+        components, component_tags = zip(*other_components)
         
-        # Combine name (first + last) with other shuffled components
-        address = f"{name} " + " ".join(shuffled_components)
-        address_tags = name_tag + list(shuffled_tags)
+        # Combine name (first + last) with other components
+        address = f"{name} " + " ".join(components)
+        address_tags = name_tag + list(component_tags)
         
         # Append results
         addresses.append(address)
@@ -104,34 +106,40 @@ def generate_address(num_addresses, seed=42):
     
     return addresses, tags
 
-# Generate 100 random addresses and their tags
-random_addresses, random_tags = generate_address(100)
 
-# Convert the generated addresses and tags to a DataFrame for CSV export
-df_addresses = pd.DataFrame({
-    "Address": random_addresses,
-    "Tags": random_tags
-})
+def create_df(rd):
+  # Generate 100 random addresses and their tags
+  random_addresses, random_tags = generate_address(100, rd=rd)
 
-rows = df_addresses.shape[0]
+  # Convert the generated addresses and tags to a DataFrame for CSV export
+  df_addresses = pd.DataFrame({
+      "Address": random_addresses,
+      "Tags": random_tags
+  })
 
-for index, row in df_addresses.iterrows():
-    content = df_addresses.iloc[index,0]
-    df_addresses['Predict'] = df_addresses['Address'].apply(parse)
+  rows = df_addresses.shape[0]
 
+  for index, row in df_addresses.iterrows():
+      content = df_addresses.iloc[index,0]
+      df_addresses['Predict'] = df_addresses['Address'].apply(parse)
 
-# Flatten the 'Tags' and 'Predict' columns to compare corresponding elements
-true_tags = [tag for tags in df_addresses["Tags"] for tag in tags]
-predicted_tags = [tag for tags in df_addresses["Predict"] for tag in tags]
+  return df_addresses
 
-# Create the confusion matrix
-cm = confusion_matrix(true_tags, predicted_tags)
+def create_confusion_matrix(df_addresses):
+  # Flatten the 'Tags' and 'Predict' columns to compare corresponding elements
+  true_tags = [tag for tags in df_addresses["Tags"] for tag in tags]
+  predicted_tags = [tag for tags in df_addresses["Predict"] for tag in tags]
 
-# Get the unique labels (tags) to display the confusion matrix with proper labels
-labels = np.unique(true_tags)
+  # Create the confusion matrix
+  cm = confusion_matrix(true_tags, predicted_tags)
 
-# Convert the confusion matrix into a DataFrame for better visualization
-cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+  # Get the unique labels (tags) to display the confusion matrix with proper labels
+  labels = np.unique(true_tags)
+
+  # Convert the confusion matrix into a DataFrame for better visualization
+  cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+
+  return cm_df
 
 
 #---------------------------------------------------
@@ -161,46 +169,45 @@ def highlight_address(address, tags):
     
     return highlighted_address
 
-
-# def get_random_ex():
-#     # Select a random number from the fixed set without setting a seed for the choice
-#     return random.choice(df_addresses.values)
-
-def get_random_ex():
+def get_random_ex(df_addresses):
     return df_addresses.sample(n=1).iloc[0]
 
-st.subheader('Random position tags')
-# Random and Displaythe highlighted address in Streamlit
-if st.button('Generate Example'):
-  # Example of an address with tags to highlight
-  sample_address = get_random_ex()
+df_fixed = create_df(rd=False)
+df_rand = create_df(rd=True)
 
-  address = sample_address[0]
-  tags = sample_address[1]
+with st.container(border = True):
+  st.subheader('Random position tags')
+  # Random and Displaythe highlighted address in Streamlit
+  if st.button('Generate Example'):
+    # Example of an address with tags to highlight
+    sample_address = get_random_ex(df_rand)
 
-  # Highlight the example address
-  highlighted_example = highlight_address(address, tags)
-  # Streamlit markdown with the example and legend
-  st.markdown(
-      f"""
-      ### Example Address with Highlighted Tags
-      {highlighted_example}
-      """,
-      unsafe_allow_html=True
+    address = sample_address[0]
+    tags = sample_address[1]
+
+    # Highlight the example address
+    highlighted_example = highlight_address(address, tags)
+    # Streamlit markdown with the example and legend
+    st.markdown(
+        f"""
+        ### Example Address with Highlighted Tags
+        {highlighted_example}
+        """,
+        unsafe_allow_html=True
+      )
+
+
+    # Legend to explain each tag
+    st.markdown(
+        """
+        ### Legend:
+        <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
+        <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
+        <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
+        <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
+        """,
+        unsafe_allow_html=True
     )
-
-
-  # Legend to explain each tag
-  st.markdown(
-      """
-      ### Legend:
-      <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
-      <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
-      <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
-      <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
-      """,
-      unsafe_allow_html=True
-  )
 
 col1, col2 = st.columns(2)
 
@@ -210,8 +217,9 @@ with col1:
   # Plotting the confusion matrix using Seaborn and Matplotlib
   with st.container(border = True):
     # Display the plot within a specific div container
+    cm_df_rand = create_confusion_matrix(df_rand)
     fig, ax = plt.subplots(figsize=(8, 6))  # You can still control fig size
-    sns.heatmap(cm_df, annot=True, fmt="d", cmap="Blues", cbar=True, ax=ax)
+    sns.heatmap(cm_df_rand, annot=True, fmt="d", cmap="Blues", cbar=True, ax=ax)
     
     # Set plot labels and title
     ax.set_xlabel('Predicted Labels')
@@ -220,7 +228,7 @@ with col1:
     # Display the plot in Streamlit with the custom style class
     st.pyplot(fig)
 
-  st.dataframe(df_addresses, use_container_width=False)
+  st.dataframe(df_rand, use_container_width=False)
 
 
 with col2:
@@ -229,8 +237,9 @@ with col2:
   # Plotting the confusion matrix using Seaborn and Matplotlib
   with st.container(border = True):
     # Display the plot within a specific div container
+    cm_df_fixed = create_confusion_matrix(df_fixed)
     fig, ax = plt.subplots(figsize=(8, 6))  # You can still control fig size
-    sns.heatmap(cm_df, annot=True, fmt="d", cmap="Reds", cbar=True, ax=ax)
+    sns.heatmap(cm_df_fixed, annot=True, fmt="d", cmap="Reds", cbar=True, ax=ax)
     
     # Set plot labels and title
     ax.set_xlabel('Predicted Labels')
@@ -239,4 +248,4 @@ with col2:
     # Display the plot in Streamlit with the custom style class
     st.pyplot(fig)
 
-  st.dataframe(df_addresses, use_container_width=False)
+  st.dataframe(df_fixed, use_container_width=False)
