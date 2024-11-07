@@ -67,8 +67,8 @@ provinces = ["กรุงเทพฯ", "กทม", "กรุงเทพม�
 postal_codes = ["10100", "10240", "10120", "10230", "10310", "10150", "10210", "11120", "10270", "10540"]
 
 # Function to generate random addresses with shuffled order (except name-surname order)
-def generate_address(num_addresses):
-    random.seed(42)
+def generate_address(num_addresses, seed=42):
+    random.seed(seed)
     addresses = []
     tags = []
     
@@ -137,8 +137,8 @@ cm_df = pd.DataFrame(cm, index=labels, columns=labels)
 #---------------------------------------------------
 st.set_page_config(
     page_title="NER Visualization",
-    page_icon="📊"
-    # layout="wide"
+    page_icon="📊",
+    layout="wide"
 )
 
 # Create WebApp by Streamlit
@@ -162,11 +162,19 @@ def highlight_address(address, tags):
     return highlighted_address
 
 
+# def get_random_ex():
+#     # Select a random number from the fixed set without setting a seed for the choice
+#     return random.choice(df_addresses.values)
+
+def get_random_ex():
+    return df_addresses.sample(n=1).iloc[0]
+
+st.subheader('Random position tags')
 # Random and Displaythe highlighted address in Streamlit
 if st.button('Generate Example'):
-
   # Example of an address with tags to highlight
-  sample_address = random.choice(df_addresses.values)
+  sample_address = get_random_ex()
+
   address = sample_address[0]
   tags = sample_address[1]
 
@@ -179,31 +187,56 @@ if st.button('Generate Example'):
       {highlighted_example}
       """,
       unsafe_allow_html=True
+    )
+
+
+  # Legend to explain each tag
+  st.markdown(
+      """
+      ### Legend:
+      <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
+      <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
+      <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
+      <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
+      """,
+      unsafe_allow_html=True
   )
 
+col1, col2 = st.columns(2)
 
-# Legend to explain each tag
-st.markdown(
-    """
-    ### Legend:
-    <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
-    <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
-    <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
-    <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
-    """,
-    unsafe_allow_html=True
-)
+with col1:
+  st.subheader('Confusion Matrix from Testing data (Random Pos)')
+
+  # Plotting the confusion matrix using Seaborn and Matplotlib
+  with st.container(border = True):
+    # Display the plot within a specific div container
+    fig, ax = plt.subplots(figsize=(8, 6))  # You can still control fig size
+    sns.heatmap(cm_df, annot=True, fmt="d", cmap="Blues", cbar=True, ax=ax)
+    
+    # Set plot labels and title
+    ax.set_xlabel('Predicted Labels')
+    ax.set_ylabel('True Labels')
+    # ax.set_title('Confusion Matrix')
+    # Display the plot in Streamlit with the custom style class
+    st.pyplot(fig)
+
+  st.dataframe(df_addresses, use_container_width=False)
 
 
-st.subheader('Confusion Matrix from Testing data')
+with col2:
+  st.subheader('Confusion Matrix from Testing data (Fixed Pos)')
 
-# Plotting the confusion matrix using Seaborn and Matplotlib
-with st.container(border = True):
-  # Display the plot within a specific div container
-  fig, ax = plt.subplots(figsize=(8, 6))  # You can still control fig size
-  sns.heatmap(cm_df, annot=True, fmt="d", cmap="Blues", cbar=True, ax=ax)
+  # Plotting the confusion matrix using Seaborn and Matplotlib
+  with st.container(border = True):
+    # Display the plot within a specific div container
+    fig, ax = plt.subplots(figsize=(8, 6))  # You can still control fig size
+    sns.heatmap(cm_df, annot=True, fmt="d", cmap="Reds", cbar=True, ax=ax)
+    
+    # Set plot labels and title
+    ax.set_xlabel('Predicted Labels')
+    ax.set_ylabel('True Labels')
+    # ax.set_title('Confusion Matrix')
+    # Display the plot in Streamlit with the custom style class
+    st.pyplot(fig)
 
-  # Display the plot in Streamlit with the custom style class
-  st.pyplot(fig)
-
-st.dataframe(df_addresses, use_container_width=False)
+  st.dataframe(df_addresses, use_container_width=False)
