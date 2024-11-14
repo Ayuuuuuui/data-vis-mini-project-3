@@ -307,7 +307,6 @@ label_list = st.session_state['label_list']
 
 
 def shuffle_address_components(df):
-    random.seed(999)
     shuffled_addresses = []
     shuffled_predictions = []
     shuffled_labels = []
