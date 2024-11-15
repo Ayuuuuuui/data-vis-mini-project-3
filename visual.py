@@ -238,22 +238,6 @@ def generate_samples():
 
     return sample_addresses, predicted_tags_list, label_list
 
-with col1:
-  # Button to regenerate samples
-  if st.button("Generate New Samples"):
-      generate_new_samples = True
-  else:
-      generate_new_samples = False
-
-# Generate or regenerate samples
-if (generate_new_samples or 'sample_addresses') and (generate_new_samples or 'label_list') not in st.session_state:
-    st.session_state['sample_addresses'], st.session_state['predicted_tags_list'], st.session_state['label_list'] = generate_samples()
-
-sample_addresses = st.session_state['sample_addresses']
-predicted_tags_list = st.session_state['predicted_tags_list']
-label_list = st.session_state['label_list']
-
-
 def shuffle_address_components(df):
     shuffled_addresses = []
     shuffled_predictions = []
@@ -283,25 +267,51 @@ def shuffle_address_components(df):
         shuffled_predictions.append(parse(shuffled_address))
         shuffled_labels.append(list(shuffled_lbl))
 
-    # Create a new DataFrame with the shuffled addresses and tags
-    shuffled_df = pd.DataFrame({
-        "Address": shuffled_addresses,
-        "Prediction": shuffled_predictions,
-        "Labels": shuffled_labels
-    })
+    return shuffled_addresses, shuffled_predictions, shuffled_labels
 
-    return shuffled_df
+with col1:
+  # Button to regenerate samples
+  if st.button("Generate New Samples"):
+      generate_new_samples = True
+  else:
+      generate_new_samples = False
 
-# Display DataFrame with addresses, predicted tags, and labels
+# Generate or regenerate samples
+if generate_new_samples or 'sample_addresses' not in st.session_state:
+    st.session_state['sample_addresses'], st.session_state['predicted_tags_list'], st.session_state['label_list'] = generate_samples()
+    # Clear shuffled data when new samples are generated
+    st.session_state.pop('shuffled_addresses', None)
+    st.session_state.pop('shuffled_predictions', None)
+    st.session_state.pop('shuffled_labels', None)
+
+sample_addresses = st.session_state['sample_addresses']
+predicted_tags_list = st.session_state['predicted_tags_list']
+label_list = st.session_state['label_list']
+
+# Create the original DataFrame
 df_addresses = pd.DataFrame({
     "Address": sample_addresses,
     "Prediction": predicted_tags_list,
     "Labels": label_list
 })
 
-df_shuffled_addresses = shuffle_address_components(df_addresses)
+# Check if shuffled data already exists in session_state
+if 'shuffled_addresses' not in st.session_state:
+    shuffled_addresses, shuffled_predictions, shuffled_labels = shuffle_address_components(df_addresses)
+    st.session_state['shuffled_addresses'] = shuffled_addresses
+    st.session_state['shuffled_predictions'] = shuffled_predictions
+    st.session_state['shuffled_labels'] = shuffled_labels
 
-st.write("### Table Address Prediction")
+# Access the shuffled data from session_state
+df_shuffled_addresses = pd.DataFrame({
+    "Address": st.session_state['shuffled_addresses'],
+    "Prediction": st.session_state['shuffled_predictions'],
+    "Labels": st.session_state['shuffled_labels']
+})
+
+
+
+st.write("### Address Generated")
 st.dataframe(df_addresses, use_container_width=True)
 
 true_tags = [tag for tags in df_addresses["Labels"] for tag in tags]
@@ -324,7 +334,13 @@ def create_confusion_matrix(df_addresses):
 
   return cm_df
 
-st.subheader('Model Performance')
+def prepare_data_for_plot(cm_df, data_source):
+    """Convert confusion matrix DataFrame into a format suitable for a stacked bar chart."""
+    cm_flat = cm_df.reset_index().melt(id_vars="index", var_name="Predicted", value_name="Count")
+    cm_flat.rename(columns={"index": "True"}, inplace=True)
+    cm_flat["Data Source"] = data_source  # Add a column to indicate the data source
+    return cm_flat
+
 
 def highlight_address(address, tags):
     highlighted_address = ""
@@ -345,19 +361,14 @@ def highlight_address(address, tags):
 # def get_random_ex(df_addresses):
 #     return df_addresses.sample(n=1).iloc[0]
 
-
-
-tab1, tab2 = st.tabs(['Confusion Matrix','Bar Chart'])
-with tab1:
-  col3, col4 = st.columns(2)
-
-  with col3:
-    st.markdown('##### Confusion Matrix (Shuffled Position)')
-    st.caption('Example Prediction')
-
-    sample_address = df_shuffled_addresses.iloc[22,:] # just an example
-    address = sample_address[0]
-    tags = sample_address[1]
+col5, col6 = st.columns(2)
+with col5:
+  sample_address = df_shuffled_addresses.iloc[22,:] # just an example
+  address = sample_address[0]
+  tags = sample_address[1]
+  
+  with st.container(border = True):
+    st.caption('Example Prediction for Shuffled Position')
 
     # Highlight the example address
     highlighted_example = highlight_address(address, tags)
@@ -381,6 +392,44 @@ with tab1:
         """,
         unsafe_allow_html=True
     )
+
+with col6:
+  sample_address = df_addresses.iloc[22,:] # just an example
+  address = sample_address[0]
+  tags = sample_address[1]
+
+  with st.container(border = True):
+    st.caption('Example Prediction for Fixed Position')
+
+    # Highlight the example address
+    highlighted_example = highlight_address(address, tags)
+    # Streamlit markdown with the example and legend
+    st.markdown(
+        f"""
+        {highlighted_example}
+        """,
+        unsafe_allow_html=True
+    )
+      
+    # Legend to explain each tag
+    st.markdown(
+      """
+      ###### Legend:
+      <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
+      <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
+      <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
+      <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
+      """,
+      unsafe_allow_html=True
+    )
+
+
+tab1, tab2 = st.tabs(['Confusion Matrix','Bar Chart'])
+with tab1:
+  col3, col4 = st.columns(2)
+
+  with col3:
+    st.markdown('##### Confusion Matrix (Shuffled Position)')
 
     # Plotting the confusion matrix using Seaborn and Matplotlib
     with st.container(border = True):
@@ -401,33 +450,6 @@ with tab1:
 
   with col4:
     st.markdown('##### Confusion Matrix (Fixed Position)')
-    st.caption('Example Prediction')
-
-    sample_address = df_addresses.iloc[22,:] # just an example
-    address = sample_address[0]
-    tags = sample_address[1]
-
-    # Highlight the example address
-    highlighted_example = highlight_address(address, tags)
-    # Streamlit markdown with the example and legend
-    st.markdown(
-        f"""
-        {highlighted_example}
-        """,
-        unsafe_allow_html=True
-      )
-    
-    # Legend to explain each tag
-    st.markdown(
-        """
-        ###### Legend:
-        <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
-        <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
-        <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
-        <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
-        """,
-        unsafe_allow_html=True
-    )
 
     # Plotting the confusion matrix using Seaborn and Matplotlib
     with st.container(border = True):
@@ -446,7 +468,60 @@ with tab1:
     st.dataframe(df_addresses, use_container_width=True)
 
   with tab2:
-    st.write('test')
+    st.markdown('##### Stack Bar Chart of Prediction Result')
+
+    left, middle, right = st.columns((2, 5, 2))
+
+    with middle:
+      df_shuffled_bc = prepare_data_for_plot(cm_df_rand,"Shuffled")
+      df_fixed_bc = prepare_data_for_plot(cm_df_fixed,"Fixed")
+      combined_data = pd.concat([df_shuffled_bc, df_fixed_bc], ignore_index=True)
+
+      # Add a "Correct/Incorrect" column to the combined data
+      combined_data["Match"] = combined_data.apply(
+          lambda row: "Correct" if row["True"] == row["Predicted"] else "Incorrect",
+          axis=1
+      )
+
+      input_dropdown = alt.binding_select(options=['Fixed', 'Shuffled'], name = 'Datasource')
+      selection = alt.selection_point(fields=['Data Source'], bind = input_dropdown)
+
+      # Access the data from session_state
+      cd = combined_data
+
+      # Get the unique data sources
+      data_sources = cd['Data Source'].unique()
+
+      # Add a dropdown for selecting the data source
+      selected_data_source = st.selectbox(
+          'Select Data to Show', 
+          ['All Data'] + list(data_sources)
+      )
+
+      # Filter the data based on the selection
+      if selected_data_source != 'All Data':
+          filtered_data = cd[combined_data['Data Source'] == selected_data_source]
+      else:
+          filtered_data = cd
+
+      # Create stacked bar chart
+      fig = px.bar(filtered_data, 
+                  x='True', 
+                  y='Count', 
+                  color='Match', 
+                  barmode='stack', 
+                  # facet_col='Data Source',  # This will only show the selected Data Source
+                  labels={'Match': 'Prediction result', 'True': 'Tag', 'Count': 'Count'}  
+                  )
+
+      # Update layout to adjust the size
+      fig.update_layout(
+          width=1000,  # Set the width of the plot
+          height=600  # Set the height of the plot
+      )
+      
+      # Show the plot
+      st.plotly_chart(fig, use_container_width=False)
 
 
 
