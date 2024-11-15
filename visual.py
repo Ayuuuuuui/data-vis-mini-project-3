@@ -90,66 +90,6 @@ district_variants = ["สามย่าน", "ลาดพร้าว", "บ�
 province_variants = ["ราชบุรี","กรุงเทพ","กรุงเทพมหานคร"]
 
 
-# Function to generate random addresses with shuffled order (except name-surname order)
-# Updated function with 'rd' parameter to control shuffling
-# def generate_address(num_addresses, seed=42, rd=True):
-#     random.seed(seed)
-#     addresses = []
-#     tags = []
-    
-#     for _ in range(num_addresses):
-#         # Generate name and surname, which must appear together
-#         first_name = random.choice(first_names)
-#         last_name = random.choice(last_names)
-#         name = f"นาย{first_name} {last_name}"
-#         name_tag = ["O", "O"]  # Tag 'O' for first name and last name
-        
-#         # Other components for the address and their tags
-#         other_components = [
-#             (f"{random.randint(1, 999)}/{random.randint(1, 99)}", "ADDR"),
-#             (random.choice(districts), "LOC"),
-#             (random.choice(subdistricts), "LOC"),
-#             (random.choice(provinces), "LOC"),
-#             (random.choice(postal_codes), "POST")
-#         ]
-        
-#         # Conditionally shuffle the other components based on the rd parameter
-#         if rd:
-#             random.shuffle(other_components)
-        
-#         # Separate components and their tags (in either shuffled or fixed order)
-#         components, component_tags = zip(*other_components)
-        
-#         # Combine name (first + last) with other components
-#         address = f"{name} " + " ".join(components)
-#         address_tags = name_tag + list(component_tags)
-        
-#         # Append results
-#         addresses.append(address)
-#         tags.append(address_tags)
-    
-#     return addresses, tags
-
-
-# def create_df(rd):
-#   # Generate 100 random addresses and their tags
-#   random_addresses, random_tags = generate_address(100, rd=rd)
-
-#   # Convert the generated addresses and tags to a DataFrame for CSV export
-#   df_addresses = pd.DataFrame({
-#       "Address": random_addresses,
-#       "Tags": random_tags
-#   })
-
-#   rows = df_addresses.shape[0]
-
-#   for index, row in df_addresses.iterrows():
-#       content = df_addresses.iloc[index,0]
-#       df_addresses['Predict'] = df_addresses['Address'].apply(parse)
-
-#   return df_addresses
-
-
 #---------------------------------------------------
 st.set_page_config(
     page_title="NER Visualization",
@@ -168,19 +108,27 @@ with col1:
         options=["Name", "HouseNumber", "Village", "Soi", "Road", "Subdistrict", "District", "Province", "PostalCode"],
         default=["Name", "HouseNumber", "Village", "Soi", "Road", "Subdistrict", "District", "Province", "PostalCode"]
     )
+    # Master checkbox for "All"
+    all_selected = st.checkbox("Select All Components", True)
 
-    # Address component visibility
+    # Individual component checkboxes
     component_visibility = {
-        "Name": st.checkbox("Include Name", True),
-        "HouseNumber": st.checkbox("Include House Number", True),
-        "Village": st.checkbox("Include Village", True),
-        "Soi": st.checkbox("Include Soi", True),
-        "Road": st.checkbox("Include Road", True),
-        "Subdistrict": st.checkbox("Include Subdistrict", True),
-        "District": st.checkbox("Include District", True),
-        "Province": st.checkbox("Include Province", True),
-        "PostalCode": st.checkbox("Include Postal Code", True)
+        "Name": st.checkbox("Include Name", all_selected),
+        "HouseNumber": st.checkbox("Include House Number", all_selected),
+        "Village": st.checkbox("Include Village", all_selected),
+        "Soi": st.checkbox("Include Soi", all_selected),
+        "Road": st.checkbox("Include Road", all_selected),
+        "Subdistrict": st.checkbox("Include Subdistrict", all_selected),
+        "District": st.checkbox("Include District", all_selected),
+        "Province": st.checkbox("Include Province", all_selected),
+        "PostalCode": st.checkbox("Include Postal Code", all_selected)
     }
+
+    # Ensure consistency when "All" is toggled
+    if all_selected:
+        # If "All" is selected, ensure all individual components are selected
+        for key in component_visibility.keys():
+            component_visibility[key] = True
 
 with col2:
     name_format = st.multiselect("Select Name Format", ["นาย", "นาง", "นางสาว","No prefix"], default=["นาย", "นาง", "นางสาว","No prefix"])
@@ -354,19 +302,22 @@ df_addresses = pd.DataFrame({
 df_shuffled_addresses = shuffle_address_components(df_addresses)
 
 st.write("### Table Address Prediction")
-st.dataframe(df_addresses, use_container_width=False)
+st.dataframe(df_addresses, use_container_width=True)
+
+true_tags = [tag for tags in df_addresses["Labels"] for tag in tags]
+predicted_tags = [tag for tags in df_addresses["Prediction"] for tag in tags]
 
 
 def create_confusion_matrix(df_addresses):
   # Flatten the 'Tags' and 'Predict' columns to compare corresponding elements
   true_tags = [tag for tags in df_addresses["Labels"] for tag in tags]
   predicted_tags = [tag for tags in df_addresses["Prediction"] for tag in tags]
-
-  # Create the confusion matrix
-  cm = confusion_matrix(true_tags, predicted_tags)
-
+  
   # Get the unique labels (tags) to display the confusion matrix with proper labels
-  labels = np.unique(true_tags)
+  labels = ['O','LOC','POST','ADDR']
+  
+  # Create the confusion matrix
+  cm = confusion_matrix(true_tags, predicted_tags, labels=labels)
 
   # Convert the confusion matrix into a DataFrame for better visualization
   cm_df = pd.DataFrame(cm, index=labels, columns=labels)
@@ -445,7 +396,7 @@ with tab1:
       # Display the plot in Streamlit with the custom style class
       st.pyplot(fig)
 
-    st.dataframe(df_shuffled_addresses, use_container_width=False)
+    st.dataframe(df_shuffled_addresses, use_container_width=True)
 
 
   with col4:
@@ -492,7 +443,7 @@ with tab1:
       # Display the plot in Streamlit with the custom style class
       st.pyplot(fig)
 
-    st.dataframe(df_addresses, use_container_width=False)
+    st.dataframe(df_addresses, use_container_width=True)
 
   with tab2:
     st.write('test')
@@ -506,64 +457,65 @@ tag_colors = {
     "ADDR": "#A2DCE7"
 }
 
-#Sankey Diagram
-st.write("### Sankey Diagram of Prediction Flows")
+with st.container(border = True):
+  #Sankey Diagram
+  st.write("### Sankey Diagram of Prediction Flows")
 
-# Split tags into individual levels
-df_tags_split = pd.DataFrame(predicted_tags_list, columns=[f"Level {i+1}" for i in range(max(len(tags) for tags in predicted_tags_list))])
+  # Split tags into individual levels
+  df_tags_split = pd.DataFrame(predicted_tags_list, columns=[f"Level {i+1}" for i in range(max(len(tags) for tags in predicted_tags_list))])
 
-# Prepare data for Sankey Diagram
-levels = df_tags_split.columns
-unique_tags = ["O", "LOC", "POST", "ADDR"]
-labels = [f"{tag} - {level}" for level in levels for tag in unique_tags]
-label_map = {label: i for i, label in enumerate(labels)}
+  # Prepare data for Sankey Diagram
+  levels = df_tags_split.columns
+  unique_tags = ["O", "LOC", "POST", "ADDR"]
+  labels = [f"{tag} - {level}" for level in levels for tag in unique_tags]
+  label_map = {label: i for i, label in enumerate(labels)}
 
-# Assign colors to nodes based on tag_colors
-node_colors = [tag_colors[tag.split(" - ")[0]] for tag in labels]
+  # Assign colors to nodes based on tag_colors
+  node_colors = [tag_colors[tag.split(" - ")[0]] for tag in labels]
 
-source = []
-target = []
-value = []
+  source = []
+  target = []
+  value = []
 
-# Create flows between consecutive levels based on tag transitions
-for i in range(len(levels) - 1):
-    level1 = df_tags_split[levels[i]]
-    level2 = df_tags_split[levels[i + 1]]
-    flow_data = pd.concat([level1, level2], axis=1).value_counts().reset_index()
-    for (src_tag, tgt_tag), count in zip(flow_data.values[:, :2], flow_data.values[:, 2]):
-        src_label = f"{src_tag} - {levels[i]}"
-        tgt_label = f"{tgt_tag} - {levels[i + 1]}"
-        if src_label in label_map and tgt_label in label_map:
-            source.append(label_map[src_label])
-            target.append(label_map[tgt_label])
-            value.append(count)
+  # Create flows between consecutive levels based on tag transitions
+  for i in range(len(levels) - 1):
+      level1 = df_tags_split[levels[i]]
+      level2 = df_tags_split[levels[i + 1]]
+      flow_data = pd.concat([level1, level2], axis=1).value_counts().reset_index()
+      for (src_tag, tgt_tag), count in zip(flow_data.values[:, :2], flow_data.values[:, 2]):
+          src_label = f"{src_tag} - {levels[i]}"
+          tgt_label = f"{tgt_tag} - {levels[i + 1]}"
+          if src_label in label_map and tgt_label in label_map:
+              source.append(label_map[src_label])
+              target.append(label_map[tgt_label])
+              value.append(count)
 
-# Create Sankey Diagram with custom colors and font adjustments
-fig = go.Figure(go.Sankey(
-    node=dict(
-        pad=20,
-        thickness=20,
-        line=dict(color="rgba(0,0,0,0)", width=0),
-        label=labels,
-        color=node_colors
-    ),
-    link=dict(
-        source=source,
-        target=target,
-        value=value,
-        color= '#EEEDE7'
-    )
-))
-
-# Adjust layout for minimalistic font and larger size
-fig.update_layout(
-      font=dict(
-          family = "Arial",  # Minimalist font style
-          size = 16,  # Larger font size
+  # Create Sankey Diagram with custom colors and font adjustments
+  fig = go.Figure(go.Sankey(
+      node=dict(
+          pad=20,
+          thickness=20,
+          line=dict(color="rgba(0,0,0,0)", width=0),
+          label=labels,
+          color=node_colors
       ),
-      width=2000,  # Adjust width as needed
-      height=500   # Adjust height as needed
-  )
+      link=dict(
+          source=source,
+          target=target,
+          value=value,
+          color= '#EEEDE7'
+      )
+  ))
 
-# Display Sankey Diagram in Streamlit
-st.plotly_chart(fig, use_container_width=False)
+  # Adjust layout for minimalistic font and larger size
+  fig.update_layout(
+        font=dict(
+            family = "Arial",  # Minimalist font style
+            size = 16,  # Larger font size
+        ),
+        width=2000,  # Adjust width as needed
+        height=500   # Adjust height as needed
+    )
+
+  # Display Sankey Diagram in Streamlit
+  st.plotly_chart(fig, use_container_width=False)
