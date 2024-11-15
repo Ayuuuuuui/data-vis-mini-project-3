@@ -100,7 +100,7 @@ st.set_page_config(
 # Create WebApp by Streamlit
 st.title('Named Entity Recognition (NER) Visualization')
 # Create a function to highlight tags
-col1, col2 = st.columns(2)
+l,col1, col2,r = st.columns((1,4,4,1))
 with col1:
 # Address component selection
     components_order = st.multiselect(
