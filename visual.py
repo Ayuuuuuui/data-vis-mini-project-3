@@ -594,3 +594,39 @@ with st.container(border = True):
 
   # Display Sankey Diagram in Streamlit
   st.plotly_chart(fig, use_container_width=False)
+
+from streamlit.components.v1 import html  # Import for HTML rendering
+st.write("### Highlighted NER Tags")
+
+# Text input for long text (e.g., an article or paragraph)
+long_text = st.text_area("Enter or paste your text (article, paragraph, etc.) here:", 
+                         "ในยุคที่การเลือกที่อยู่อาศัยสะท้อนถึงไลฟ์สไตล์และความสะดวกสบาย นายวิเชียร ผู้พักอาศัยอยู่ที่ ซ.ทองหล่อ 23 เขตพระโขนง สุขุมวิท 67/2 จังหวัดราชบุรี ต.บางกะปิ ม.สวนลุม 10230 ได้แบ่งปันประสบการณ์เกี่ยวกับพื้นที่อาศัยที่ตอบโจทย์ทุกความต้องการในชีวิตประจำวัน ทั้งด้านการเดินทางและสิ่งอำนวยความสะดวกที่ครบครัน")
+
+# Button to trigger NER processing
+if st.button("Enter"):
+    # Apply NER model to the text
+    tags = parse(long_text)
+
+    st.caption('Example Prediction for Fixed Position')
+
+    # Highlight the example address
+    highlighted_example = highlight_address(long_text, tags)
+    # Streamlit markdown with the example and legend
+    st.markdown(
+        f"""
+        {highlighted_example}
+        """,
+        unsafe_allow_html=True
+    )
+      
+    # Legend to explain each tag
+    st.markdown(
+      """
+      ###### Legend:
+      <span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>
+      <span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>
+      <span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>
+      <span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>
+      """,
+      unsafe_allow_html=True
+    )
