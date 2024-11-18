@@ -13,7 +13,7 @@ import random
 import plotly.graph_objects as go
 import shap
 import requests
-
+import os
 
 model = joblib.load("model.joblib")
 
@@ -102,19 +102,32 @@ st.set_page_config(
     layout="wide"
 )
 
+# Font URL and local path
+font_url = 'https://github.com/Phonbopit/sarabun-webfont/raw/master/fonts/thsarabunnew-webfont.ttf'
+font_path = 'thsarabunnew-webfont.ttf'
+
+# Download the font if not already present
+if not os.path.exists(font_path):
+    os.system(f"wget {font_url}")
+
+# Add the font to Matplotlib
+mpl.font_manager.fontManager.addfont(font_path)
+
+# Set Matplotlib to use the custom font
+mpl.rc('font', family='TH Sarabun New')
 
 
-url = "https://github.com/Phonbopit/sarabun-webfont/raw/master/fonts/thsarabunnew-webfont.ttf"
-response = requests.get(url)
-if response.status_code == 200:
-    with open("thsarabunnew-webfont.ttf", "wb") as file:
-        file.write(response.content)
-else:
-    print("Failed to download the font.")
+# url = "https://github.com/Phonbopit/sarabun-webfont/raw/master/fonts/thsarabunnew-webfont.ttf"
+# response = requests.get(url)
+# if response.status_code == 200:
+#     with open("thsarabunnew-webfont.ttf", "wb") as file:
+#         file.write(response.content)
+# else:
+#     print("Failed to download the font.")
 
-mpl.font_manager.fontManager.addfont('thsarabunnew-webfont.ttf')
-#set the font
-plt.rcParams['font.family'] = 'TH Sarabun New'
+# mpl.font_manager.fontManager.addfont('thsarabunnew-webfont.ttf')
+# #set the font
+# plt.rcParams['font.family'] = 'TH Sarabun New'
 
 
 
