@@ -635,9 +635,8 @@ from streamlit.components.v1 import html  # Import for HTML rendering
 st.write("### Highlighted NER Tags and SHAP")
 
 # Text input for long text (e.g., an article or paragraph)
-long_text = st.text_area("Enter or paste your text (article, paragraph, etc.) here:", 
-                         "ในยุคที่การเลือกที่อยู่อาศัยสะท้อนถึงไลฟ์สไตล์และความสะดวกสบาย นายวิเชียร ผู้พักอาศัยอยู่ที่ ซ.ทองหล่อ 23 เขตพระโขนง สุขุมวิท 67/2 จังหวัดราชบุรี ต.บางกะปิ ม.สวนลุม 10230 ได้แบ่งปันประสบการณ์เกี่ยวกับพื้นที่อาศัยที่ตอบโจทย์ทุกความต้องการในชีวิตประจำวัน ทั้งด้านการเดินทางและสิ่งอำนวยความสะดวกที่ครบครัน")
-
+long_text = st.text_area("Enter or paste your text here (no more than 15 words)", 
+                         "นายวิเชียร ผู้พักอาศัยอยู่ที่ ซ.ทองหล่อ 23 เขตพระโขนง สุขุมวิท 67/2 จังหวัดราชบุรี ต.บางกะปิ ม.สวนลุม 10230 ได้แบ่งปันประสบการณ์เกี่ยวกับพื้นที่อาศัย")
 
 
 def fill_values(row, value_columns):
@@ -656,7 +655,7 @@ cbr = joblib.load('catboost.joblib')
 
 
 # Prepare the tokens and features
-tokens = long_text.split()
+tokens = long_text.split()[0:16]
 feature_matrix = [tokens_to_features(tokens, i) for i in range(len(tokens))]  # Extract features
 feature_df = pd.DataFrame(feature_matrix)
 feature_df['BOS'] = feature_df['BOS'].apply(lambda x: 1 if x else 0)
