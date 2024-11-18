@@ -121,10 +121,6 @@ plt.rcParams['font.family'] = 'TH Sarabun New'
 # Create WebApp by Streamlit
 st.title('Named Entity Recognition (NER) Visualization')
 
-import matplotlib.font_manager
-available_fonts = [f.name for f in matplotlib.font_manager.fontManager.ttflist]
-st.dataframe(available_fonts,use_container_width=True)
-
 # Create a function to highlight tags
 l,col1, col2,r = st.columns((1,4,4,1))
 with col1:
