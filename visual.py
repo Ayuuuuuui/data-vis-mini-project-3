@@ -635,7 +635,7 @@ def fill_values(row, value_columns):
 cbr = joblib.load('catboost.joblib')
 
 # Set the font for matplotlib
-matplotlib.rcParams['font.family'] = 'tahoma'
+# matplotlib.rcParams['font.family'] = 'sans-serif'
 
 # Prepare the tokens and features
 tokens = long_text.split()
