@@ -101,21 +101,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inject custom CSS to load the font
-st.markdown("""
-    <style>
-        @font-face {
-            font-family: 'Tahoma';
-            src: url('/assets/fonts/Tahoma.ttf') format('truetype');
-        }
-        body {
-            font-family: 'Tahoma', sans-serif;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # Create WebApp by Streamlit
 st.title('Named Entity Recognition (NER) Visualization')
+
+import matplotlib.font_manager
+available_fonts = [f.name for f in matplotlib.font_manager.fontManager.ttflist]
+st.dataframe(available_fonts,use_container_width=True)
+
 # Create a function to highlight tags
 l,col1, col2,r = st.columns((1,4,4,1))
 with col1:
@@ -635,12 +627,9 @@ def fill_values(row, value_columns):
 
 cbr = joblib.load('catboost.joblib')
 
-# Specify path to your Tahoma font file (e.g., "tahoma.ttf")
-font_path = "assets/fonts/Tahoma.ttf"
 
-# Load the font
-prop = fm.FontProperties(fname=font_path)
-plt.rcParams['font.family'] = prop.get_name()
+#set the font
+plt.rcParams['font.family'] = 'Sarabun'
 
 # Prepare the tokens and features
 tokens = long_text.split()
