@@ -7,3 +7,5 @@ joblib
 sklearn_crfsuite
 bs4
 seaborn
+catboost
+shap

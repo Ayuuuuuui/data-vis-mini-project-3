@@ -6,9 +6,11 @@ import altair as alt
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import seaborn as sns
 import random
 import plotly.graph_objects as go
+import shap
 
 model = joblib.load("model.joblib")
 
@@ -535,6 +537,7 @@ tag_colors = {
 with st.container(border = True):
   #Sankey Diagram
   st.write("### Sankey Diagram of Prediction Flows")
+  st.write('##### (Fixed Position)')
 
   # Split tags into individual levels
   df_tags_split = pd.DataFrame(predicted_tags_list, columns=[f"Level {i+1}" for i in range(max(len(tags) for tags in predicted_tags_list))])
@@ -596,13 +599,89 @@ with st.container(border = True):
   st.plotly_chart(fig, use_container_width=False)
 
 from streamlit.components.v1 import html  # Import for HTML rendering
-st.write("### Highlighted NER Tags")
+st.write("### Highlighted NER Tags and SHAP")
 
 # Text input for long text (e.g., an article or paragraph)
 long_text = st.text_area("Enter or paste your text (article, paragraph, etc.) here:", 
                          "ในยุคที่การเลือกที่อยู่อาศัยสะท้อนถึงไลฟ์สไตล์และความสะดวกสบาย นายวิเชียร ผู้พักอาศัยอยู่ที่ ซ.ทองหล่อ 23 เขตพระโขนง สุขุมวิท 67/2 จังหวัดราชบุรี ต.บางกะปิ ม.สวนลุม 10230 ได้แบ่งปันประสบการณ์เกี่ยวกับพื้นที่อาศัยที่ตอบโจทย์ทุกความต้องการในชีวิตประจำวัน ทั้งด้านการเดินทางและสิ่งอำนวยความสะดวกที่ครบครัน")
 
+
+
+def fill_values(row, value_columns):
+    for col in value_columns:
+        if pd.isna(row[col]):
+            if row['EOS']==1:
+                row[col] = 'EOS'
+            elif row['BOS'] == 1:
+                row[col] = 'BOS'
+    return row
+
+
+
+cbr = joblib.load('catboost.joblib')
+
+# Set the font for matplotlib
+matplotlib.rcParams['font.family'] = 'tahoma'
+
+# Prepare the tokens and features
+tokens = long_text.split()
+feature_matrix = [tokens_to_features(tokens, i) for i in range(len(tokens))]  # Extract features
+feature_df = pd.DataFrame(feature_matrix)
+feature_df['BOS'] = feature_df['BOS'].apply(lambda x: 1 if x else 0)
+feature_df['EOS'] = feature_df['EOS'].apply(lambda x: 1 if x else 0)
+
+# Handle categorical features
+cat_features = feature_df.select_dtypes(include=['object']).columns.tolist()
+feature_df = feature_df.apply(lambda row: fill_values(row, cat_features), axis=1)
+
+# Predict with the CatBoost model
+predicted_probs = cbr.predict(feature_df)
+
+# SHAP explanation
+explainer = shap.Explainer(cbr)
+shap_values = explainer(feature_df)
+classes = cbr.classes_
+
+# Function to generate SHAP waterfall plot
+def plot_shap_waterfall(instance_idx, class_idx):
+    shap_values_for_class = shap_values[instance_idx].values[:, class_idx]
+    base_value_for_class = shap_values[instance_idx].base_values[class_idx]
+    data_for_instance = shap_values[instance_idx].data
+
+    # Create SHAP waterfall plot
+    fig, ax = plt.subplots()
+    shap.plots.waterfall(
+        shap.Explanation(
+            values=shap_values_for_class,
+            base_values=base_value_for_class,
+            data=data_for_instance,
+            feature_names=feature_df.columns
+        )
+    )
+
+    # Display the plot in Streamlit
+    st.pyplot(fig)
+
+
+def highlight_address(address, tags):
+    highlighted_address = ""
+    tag_colors = {
+        "O": "background-color: #FFB067; border-radius: 5px; padding: 2px;",
+        "LOC": "background-color: #FFED86; border-radius: 5px; padding: 2px;",
+        "POST": "background-color: #A2DCE7; border-radius: 5px; padding: 2px;",
+        "ADDR": "background-color: #F8CCDC; border-radius: 5px; padding: 2px;"
+    }
+    
+    words = address.split()
+    for word, tag in zip(words, tags):
+        style = tag_colors.get(tag, "")
+        highlighted_address += f"<span style='{style}'>{word}</span> "
+    
+    return highlighted_address
+
+
 # Button to trigger NER processing
+st.caption('After enter it will take a while, please wait na ⌛️')
 if st.button("Enter"):
     # Apply NER model to the text
     tags = parse(long_text)
@@ -630,3 +709,57 @@ if st.button("Enter"):
       """,
       unsafe_allow_html=True
     )
+
+    st.markdown('##### SHAP value of each token')
+    # Get the predicted labels from the model (assume it returns an ndarray)
+    predicted_labels = cbr.predict(feature_df)
+
+     # Ensure we have a 1D array for easy handling
+    if predicted_labels.ndim > 1:
+        predicted_labels = predicted_labels.flatten()  # Convert to 1D array if needed
+
+    # Map tags to class indices
+    label_to_class_idx = {
+        'ADDR': 0,
+        'LOC': 1,
+        'O': 2,
+        'POST': 3
+    }
+
+    col1,col2,col3 = st.columns((1,4,1))
+    with col2:
+        
+        # Iterate over tokens and predicted labels to call plot_shap_waterfall
+        for instance_idx, label in enumerate(predicted_labels):
+            tk = tokens[instance_idx]
+
+            # Get the corresponding tag for the token
+            token_tag = tags[instance_idx]  # Assuming `tags` is the list of NER tags for tokens
+
+            # Highlight each token with its tag
+            highlighted_token = highlight_address(tk, [token_tag])
+
+            label_color = {
+            'O':"<span style='background-color: #FFB067; border-radius: 5px; padding: 2px;'>O</span>",
+            'LOC':"<span style='background-color: #FFED86; border-radius: 5px; padding: 2px;'>LOC</span>",
+            'POST':"<span style='background-color: #A2DCE7; border-radius: 5px; padding: 2px;'>POST</span>",
+            'ADDR':"<span style='background-color: #F8CCDC; border-radius: 5px; padding: 2px;'>ADDR</span>"
+            }
+
+            if token_tag in label_color:
+                mk_tag = label_color[token_tag]
+
+            st.markdown(
+                f"""
+                SHAP Value for each features of
+                Token:
+                {highlighted_token} <br>
+                Tag: {mk_tag}
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Only plot SHAP waterfall for relevant tags
+            if label in label_to_class_idx:
+                class_idx = label_to_class_idx[label]
+                plot_shap_waterfall(instance_idx, class_idx)
