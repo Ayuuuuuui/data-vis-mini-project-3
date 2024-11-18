@@ -636,7 +636,7 @@ def fill_values(row, value_columns):
 cbr = joblib.load('catboost.joblib')
 
 # Specify path to your Tahoma font file (e.g., "tahoma.ttf")
-font_path = "assets/fonts/tahoma.ttf"
+font_path = "assets/fonts/Tahoma.ttf"
 
 # Load the font
 prop = fm.FontProperties(fname=font_path)
