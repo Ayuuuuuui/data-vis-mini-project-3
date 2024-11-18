@@ -716,7 +716,7 @@ if "button_clicked" not in st.session_state:
 
 # Button to trigger NER processing
 st.caption('After enter it will take a while, please wait na ⌛️')
-if st.button("Enter")
+if st.button("Enter"):
     # Check if button was previously clicked
     if st.session_state.button_clicked:
         # Clear cache by rerunning the script
