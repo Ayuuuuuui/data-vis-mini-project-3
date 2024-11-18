@@ -7,6 +7,7 @@ from sklearn.metrics import confusion_matrix
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.font_manager as fm
 import seaborn as sns
 import random
 import plotly.graph_objects as go
@@ -634,8 +635,12 @@ def fill_values(row, value_columns):
 
 cbr = joblib.load('catboost.joblib')
 
-# Set the font for matplotlib
-# matplotlib.rcParams['font.family'] = 'sans-serif'
+# Specify path to your Tahoma font file (e.g., "tahoma.ttf")
+font_path = "assets/fonts/tahoma.ttf"
+
+# Load the font
+prop = fm.FontProperties(fname=font_path)
+plt.rcParams['font.family'] = prop.get_name()
 
 # Prepare the tokens and features
 tokens = long_text.split()
