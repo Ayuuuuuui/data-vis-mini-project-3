@@ -12,6 +12,7 @@ import random
 import plotly.graph_objects as go
 import shap
 
+
 model = joblib.load("model.joblib")
 
 stopwords = ["ผู้", "ที่", "ซึ่ง", "อัน"]
@@ -98,6 +99,19 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
+
+# Inject custom CSS to load the font
+st.markdown("""
+    <style>
+        @font-face {
+            font-family: 'Tahoma';
+            src: url('/assets/fonts/Tahoma.ttf') format('truetype');
+        }
+        body {
+            font-family: 'Tahoma', sans-serif;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Create WebApp by Streamlit
 st.title('Named Entity Recognition (NER) Visualization')
