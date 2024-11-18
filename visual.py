@@ -6,12 +6,13 @@ import altair as alt
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
+import matplotlib as mpl
 import matplotlib.font_manager as fm
 import seaborn as sns
 import random
 import plotly.graph_objects as go
 import shap
+import requests
 
 
 model = joblib.load("model.joblib")
@@ -100,6 +101,22 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
+
+
+
+url = "https://github.com/Phonbopit/sarabun-webfont/raw/master/fonts/thsarabunnew-webfont.ttf"
+response = requests.get(url)
+if response.status_code == 200:
+    with open("thsarabunnew-webfont.ttf", "wb") as file:
+        file.write(response.content)
+else:
+    print("Failed to download the font.")
+
+mpl.font_manager.fontManager.addfont('thsarabunnew-webfont.ttf')
+#set the font
+plt.rcParams['font.family'] = 'TH Sarabun New'
+
+
 
 # Create WebApp by Streamlit
 st.title('Named Entity Recognition (NER) Visualization')
@@ -628,8 +645,6 @@ def fill_values(row, value_columns):
 cbr = joblib.load('catboost.joblib')
 
 
-#set the font
-plt.rcParams['font.family'] = 'DejaVu Sans'
 
 # Prepare the tokens and features
 tokens = long_text.split()
