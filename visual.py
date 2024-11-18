@@ -710,10 +710,20 @@ def highlight_address(address, tags):
     
     return highlighted_address
 
+# Reset cache if button is clicked again
+if "button_clicked" not in st.session_state:
+    st.session_state.button_clicked = False
 
 # Button to trigger NER processing
 st.caption('After enter it will take a while, please wait na ⌛️')
-if st.button("Enter"):
+if st.button("Enter")
+    # Check if button was previously clicked
+    if st.session_state.button_clicked:
+        # Clear cache by rerunning the script
+        st.cache_data.clear()
+        st.session_state.button_clicked = False
+    else:
+        st.session_state.button_clicked = True
     # Apply NER model to the text
     tags = parse(long_text)
 
