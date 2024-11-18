@@ -629,7 +629,7 @@ cbr = joblib.load('catboost.joblib')
 
 
 #set the font
-plt.rcParams['font.family'] = 'Sarabun'
+plt.rcParams['font.family'] = 'DejaVu Sans'
 
 # Prepare the tokens and features
 tokens = long_text.split()
