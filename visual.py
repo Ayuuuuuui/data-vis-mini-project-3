@@ -508,55 +508,111 @@ with tab1:
     left, middle, right = st.columns((2, 5, 2))
 
     with middle:
-      df_shuffled_bc = prepare_data_for_plot(cm_df_rand,"Shuffled")
-      df_fixed_bc = prepare_data_for_plot(cm_df_fixed,"Fixed")
-      combined_data = pd.concat([df_shuffled_bc, df_fixed_bc], ignore_index=True)
+    #   df_shuffled_bc = prepare_data_for_plot(cm_df_rand,"Shuffled")
+    #   df_fixed_bc = prepare_data_for_plot(cm_df_fixed,"Fixed")
+    #   combined_data = pd.concat([df_shuffled_bc, df_fixed_bc], ignore_index=True)
 
-      # Add a "Correct/Incorrect" column to the combined data
-      combined_data["Match"] = combined_data.apply(
-          lambda row: "Correct" if row["True"] == row["Predicted"] else "Incorrect",
-          axis=1
-      )
+    #   # Add a "Correct/Incorrect" column to the combined data
+    #   combined_data["Match"] = combined_data.apply(
+    #       lambda row: "Correct" if row["True"] == row["Predicted"] else "Incorrect",
+    #       axis=1
+    #   )
 
-      input_dropdown = alt.binding_select(options=['Fixed', 'Shuffled'], name = 'Datasource')
-      selection = alt.selection_point(fields=['Data Source'], bind = input_dropdown)
+    #   input_dropdown = alt.binding_select(options=['Fixed', 'Shuffled'], name = 'Datasource')
+    #   selection = alt.selection_point(fields=['Data Source'], bind = input_dropdown)
 
-      # Access the data from session_state
-      cd = combined_data
+    #   # Access the data from session_state
+    #   cd = combined_data
 
-      # Get the unique data sources
-      data_sources = cd['Data Source'].unique()
+    #   # Get the unique data sources
+    #   data_sources = cd['Data Source'].unique()
 
-      # Add a dropdown for selecting the data source
-      selected_data_source = st.selectbox(
-          'Select Data to Show', 
-          ['All Data'] + list(data_sources)
-      )
+    #   # Add a dropdown for selecting the data source
+    #   selected_data_source = st.selectbox(
+    #       'Select Data to Show', 
+    #       ['All Data'] + list(data_sources)
+    #   )
 
-      # Filter the data based on the selection
-      if selected_data_source != 'All Data':
-          filtered_data = cd[combined_data['Data Source'] == selected_data_source]
-      else:
-          filtered_data = cd
+    #   # Filter the data based on the selection
+    #   if selected_data_source != 'All Data':
+    #       filtered_data = cd[combined_data['Data Source'] == selected_data_source]
+    #   else:
+    #       filtered_data = cd
 
-      # Create stacked bar chart
-      fig = px.bar(filtered_data, 
-                  x='True', 
-                  y='Count', 
-                  color='Match', 
-                  barmode='stack', 
-                  # facet_col='Data Source',  # This will only show the selected Data Source
-                  labels={'Match': 'Prediction result', 'True': 'Tag', 'Count': 'Count'}  
-                  )
+    #   # Create stacked bar chart
+    #   fig = px.bar(filtered_data, 
+    #               x='True', 
+    #               y='Count', 
+    #               color='Match', 
+    #               barmode='stack', 
+    #               # facet_col='Data Source',  # This will only show the selected Data Source
+    #               labels={'Match': 'Prediction result', 'True': 'Tag', 'Count': 'Count'}  
+    #               )
 
-      # Update layout to adjust the size
-      fig.update_layout(
-          width=1000,  # Set the width of the plot
-          height=600  # Set the height of the plot
-      )
+    #   # Update layout to adjust the size
+    #   fig.update_layout(
+    #       width=1000,  # Set the width of the plot
+    #       height=600  # Set the height of the plot
+    #   )
       
-      # Show the plot
-      st.plotly_chart(fig, use_container_width=False)
+    #   # Show the plot
+    #   st.plotly_chart(fig, use_container_width=False)
+    # Prepare data for plotting
+        df_shuffled_bc = prepare_data_for_plot(cm_df_rand, "Shuffled")
+        df_fixed_bc = prepare_data_for_plot(cm_df_fixed, "Fixed")
+        combined_data = pd.concat([df_shuffled_bc, df_fixed_bc], ignore_index=True)
+
+        # Add a "Correct/Incorrect" column to the combined data
+        combined_data["Match"] = combined_data.apply(
+            lambda row: "Correct" if row["True"] == row["Predicted"] else "Incorrect",
+            axis=1
+        )
+
+        # Initialize session state for the dropdown
+        if "selected_data_source" not in st.session_state:
+            st.session_state.selected_data_source = "All Data"
+
+        # Get unique data sources from the combined data
+        data_sources = combined_data['Data Source'].unique()
+
+        # Add "All Data" to the options for the dropdown
+        dropdown_options = ['All Data'] + list(data_sources)
+
+        # Handle the selected data source correctly
+        selected_data_source = st.selectbox(
+            'Select Data to Show',
+            dropdown_options,
+            index=dropdown_options.index(st.session_state.selected_data_source) if st.session_state.selected_data_source in dropdown_options else 0,
+            key="data_source_dropdown"
+        )
+
+        # Update session state with the selected value
+        st.session_state.selected_data_source = selected_data_source
+
+        # Filter the data based on the dropdown selection
+        if st.session_state.selected_data_source != 'All Data':
+            filtered_data = combined_data[combined_data['Data Source'] == st.session_state.selected_data_source]
+        else:
+            filtered_data = combined_data
+
+        # Create the stacked bar chart
+        fig = px.bar(
+            filtered_data,
+            x='True',
+            y='Count',
+            color='Match',
+            barmode='stack',
+            labels={'Match': 'Prediction result', 'True': 'Tag', 'Count': 'Count'}
+        )
+
+        # Update layout to adjust the size
+        fig.update_layout(
+            width=1000,  # Set the width of the plot
+            height=600   # Set the height of the plot
+        )
+
+        # Display the chart
+        st.plotly_chart(fig, use_container_width=False)
 
 
 
