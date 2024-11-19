@@ -708,8 +708,6 @@ def fill_values(row, value_columns):
 
 cbr = joblib.load('catboost.joblib')
 
-
-
 # Prepare the tokens and features
 tokens = long_text.split()[0:16]
 feature_matrix = [tokens_to_features(tokens, i) for i in range(len(tokens))]  # Extract features
@@ -717,17 +715,17 @@ feature_df = pd.DataFrame(feature_matrix)
 feature_df['BOS'] = feature_df['BOS'].apply(lambda x: 1 if x else 0)
 feature_df['EOS'] = feature_df['EOS'].apply(lambda x: 1 if x else 0)
 
-# Handle categorical features
-cat_features = feature_df.select_dtypes(include=['object']).columns.tolist()
-feature_df = feature_df.apply(lambda row: fill_values(row, cat_features), axis=1)
+# # Handle categorical features
+# cat_features = feature_df.select_dtypes(include=['object']).columns.tolist()
+# feature_df = feature_df.apply(lambda row: fill_values(row, cat_features), axis=1)
 
-# Predict with the CatBoost model
-predicted_probs = cbr.predict(feature_df)
+# # Predict with the CatBoost model
+# predicted_probs = cbr.predict(feature_df)
 
-# SHAP explanation
-explainer = shap.Explainer(cbr)
-shap_values = explainer(feature_df)
-classes = cbr.classes_
+# # SHAP explanation
+# explainer = shap.Explainer(cbr)
+# shap_values = explainer(feature_df)
+# classes = cbr.classes_
 
 # Function to generate SHAP waterfall plot
 def plot_shap_waterfall(instance_idx, class_idx):
@@ -749,22 +747,6 @@ def plot_shap_waterfall(instance_idx, class_idx):
     # Display the plot in Streamlit
     st.pyplot(fig)
 
-
-def highlight_address(address, tags):
-    highlighted_address = ""
-    tag_colors = {
-        "O": "background-color: #FFB067; border-radius: 5px; padding: 2px;",
-        "LOC": "background-color: #FFED86; border-radius: 5px; padding: 2px;",
-        "POST": "background-color: #A2DCE7; border-radius: 5px; padding: 2px;",
-        "ADDR": "background-color: #F8CCDC; border-radius: 5px; padding: 2px;"
-    }
-    
-    words = address.split()
-    for word, tag in zip(words, tags):
-        style = tag_colors.get(tag, "")
-        highlighted_address += f"<span style='{style}'>{word}</span> "
-    
-    return highlighted_address
 
 # Reset cache if button is clicked again
 if "button_clicked" not in st.session_state:
@@ -808,6 +790,16 @@ if st.button("Enter"):
     )
 
     st.markdown('##### SHAP value of each token')
+
+    # Handle categorical features
+    cat_features = feature_df.select_dtypes(include=['object']).columns.tolist()
+    feature_df = feature_df.apply(lambda row: fill_values(row, cat_features), axis=1)
+
+    # SHAP explanation
+    explainer = shap.Explainer(cbr)
+    shap_values = explainer(feature_df)
+    classes = cbr.classes_
+
     # Get the predicted labels from the model (assume it returns an ndarray)
     predicted_labels = cbr.predict(feature_df)
 
