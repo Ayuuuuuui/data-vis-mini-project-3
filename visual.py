@@ -133,7 +133,7 @@ mpl.rc('font', family='TH Sarabun New')
 
 # Create WebApp by Streamlit
 st.title('Named Entity Recognition (NER) Visualization')
-
+st.markdown('##### Please do not rush into filtering the visual will crash 🥹')
 # Create a function to highlight tags
 l,col1, col2,r = st.columns((1,4,4,1))
 with col1:
